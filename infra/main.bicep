@@ -80,6 +80,8 @@ module api './app/api.bicep' = {
     identityId: apiUserAssignedIdentity.outputs.identityId
     identityClientId: apiUserAssignedIdentity.outputs.identityClientId
     appSettings: {
+      CosmosDBEndpoint: cosmosDB.outputs.endpoint
+      CosmosDBDatabaseName: cosmosDBDatabase.outputs.databaseName
     }
     virtualNetworkSubnetId: !vnetEnabled ? '' : serviceVirtualNetwork.outputs.appSubnetID
   }
@@ -98,6 +100,34 @@ module storage './core/storage/storage-account.bicep' = {
     networkAcls: !vnetEnabled ? {} : {
       defaultAction: 'Deny'
     }
+  }
+}
+
+// Cosmos DB account for snippet storage
+module cosmosDB './core/db/cosmos-account.bicep' = {
+  name: 'cosmosDB'
+  scope: rg
+  params: {
+    name: '${abbrs.documentDBDatabaseAccounts}${resourceToken}'
+    location: location
+    tags: tags
+    publicNetworkAccess: vnetEnabled ? 'Disabled' : 'Enabled'
+  }
+}
+
+// Create a database and container for snippets
+module cosmosDBDatabase './core/db/cosmos-database.bicep' = {
+  name: 'cosmosDBDatabase'
+  scope: rg
+  params: {
+    accountName: cosmosDB.outputs.name
+    databaseName: 'snippets-db'
+    containers: [
+      {
+        name: 'snippets'
+        partitionKey: '/snippetname'
+      }
+    ]
   }
 }
 

@@ -1,7 +1,9 @@
 {
-    "IsEncrypted": false,
-    "Values": {
-      "FUNCTIONS_WORKER_RUNTIME": "python",
-      "AzureWebJobsStorage": "UseDevelopmentStorage=true"
-    }
+  "IsEncrypted": false,
+  "Values": {
+    "FUNCTIONS_WORKER_RUNTIME": "python",
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "CosmosDBEndpoint": "https://localhost:8081",
+    "CosmosDBDatabaseName": "snippets-db"
   }
+}
