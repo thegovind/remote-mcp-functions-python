@@ -1,7 +1,9 @@
 import json
 import logging
+import os
 
 import azure.functions as func
+from azure.cosmos import CosmosClient
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.FUNCTION)
 
@@ -9,6 +11,10 @@ app = func.FunctionApp(http_auth_level=func.AuthLevel.FUNCTION)
 _SNIPPET_NAME_PROPERTY_NAME = "snippetname"
 _SNIPPET_PROPERTY_NAME = "snippet"
 _BLOB_PATH = "snippets/{mcptoolargs." + _SNIPPET_NAME_PROPERTY_NAME + "}.json"
+
+# Constants for Cosmos DB
+_COSMOS_DB_NAME = "snippets"
+_COSMOS_DB_CONTAINER = "items"
 
 
 class ToolProperty:
@@ -104,3 +110,83 @@ def save_snippet(file: func.Out[str], context) -> str:
     file.set(snippet_content_from_args)
     logging.info(f"Saved snippet: {snippet_content_from_args}")
     return f"Snippet '{snippet_content_from_args}' saved successfully"
+
+@app.generic_trigger(
+    arg_name="context",
+    type="mcpToolTrigger",
+    toolName="get_snippet_cosmos",
+    description="Retrieve a snippet by name from Cosmos DB.",
+    toolProperties=tool_properties_get_snippets_json,
+)
+def get_snippet_cosmos(context) -> str:
+    """
+    Retrieves a snippet by name from Azure Cosmos DB.
+
+    Args:
+        context: The trigger context containing the input arguments.
+
+    Returns:
+        str: The content of the snippet or an error message.
+    """
+    content = json.loads(context)
+    snippet_name = content["arguments"][_SNIPPET_NAME_PROPERTY_NAME]
+    
+    connection_string = os.environ.get("CosmosDbConnectionString")
+    if not connection_string:
+        return "Cosmos DB connection string not configured"
+        
+    client = CosmosClient.from_connection_string(connection_string)
+    database = client.get_database_client(_COSMOS_DB_NAME)
+    container = database.get_container_client(_COSMOS_DB_CONTAINER)
+    
+    query = f"SELECT * FROM c WHERE c.id = '{snippet_name}'"
+    items = list(container.query_items(query=query, enable_cross_partition_query=True))
+    
+    if not items:
+        return f"Snippet '{snippet_name}' not found"
+        
+    return items[0][_SNIPPET_PROPERTY_NAME]
+
+@app.generic_trigger(
+    arg_name="context",
+    type="mcpToolTrigger",
+    toolName="save_snippet_cosmos",
+    description="Save a snippet with a name to Cosmos DB.",
+    toolProperties=tool_properties_save_snippets_json,
+)
+def save_snippet_cosmos(context) -> str:
+    """
+    Saves a snippet with a name to Azure Cosmos DB.
+
+    Args:
+        context: The trigger context containing the input arguments.
+
+    Returns:
+        str: A message indicating success or failure.
+    """
+    content = json.loads(context)
+    snippet_name = content["arguments"][_SNIPPET_NAME_PROPERTY_NAME]
+    snippet_content = content["arguments"][_SNIPPET_PROPERTY_NAME]
+
+    if not snippet_name:
+        return "No snippet name provided"
+
+    if not snippet_content:
+        return "No snippet content provided"
+        
+    connection_string = os.environ.get("CosmosDbConnectionString")
+    if not connection_string:
+        return "Cosmos DB connection string not configured"
+        
+    client = CosmosClient.from_connection_string(connection_string)
+    database = client.get_database_client(_COSMOS_DB_NAME)
+    container = database.get_container_client(_COSMOS_DB_CONTAINER)
+    
+    item = {
+        "id": snippet_name,
+        _SNIPPET_PROPERTY_NAME: snippet_content
+    }
+    
+    container.upsert_item(item)
+    logging.info(f"Saved snippet to Cosmos DB: {snippet_content}")
+    return f"Snippet '{snippet_name}' saved successfully to Cosmos DB"
