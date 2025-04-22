@@ -101,6 +101,43 @@ module storage './core/storage/storage-account.bicep' = {
   }
 }
 
+// Azure Cosmos DB for document storage
+resource cosmosDbAccount 'Microsoft.DocumentDB/databaseAccounts@2023-04-15' = {
+  name: '${abbrs.documentDBDatabaseAccounts}${resourceToken}'
+  location: location
+  tags: tags
+  kind: 'GlobalDocumentDB'
+  properties: {
+    databaseAccountOfferType: 'Standard'
+    consistencyPolicy: {
+      defaultConsistencyLevel: 'Session'
+    }
+    publicNetworkAccess: vnetEnabled ? 'Disabled' : 'Enabled'
+  }
+  
+  resource database 'sqlDatabases' = {
+    name: 'snippets'
+    properties: {
+      resource: {
+        id: 'snippets'
+      }
+    }
+    
+    resource container 'containers' = {
+      name: 'items'
+      properties: {
+        resource: {
+          id: 'items'
+          partitionKey: {
+            paths: ['/id']
+            kind: 'Hash'
+          }
+        }
+      }
+    }
+  }
+}
+
 var StorageBlobDataOwner = 'b7e6dc6d-f1e8-4753-8033-0f276bb0955b'
 var StorageQueueDataContributor = '974c5e8b-45b9-4653-ba55-5f855dd0fb88'
 
