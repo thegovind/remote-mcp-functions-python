@@ -9,6 +9,7 @@ param runtimeVersion string
 param serviceName string = 'api'
 param storageAccountName string
 param deploymentStorageContainerName string
+param cosmosDBConnectionString string = ''
 param virtualNetworkSubnetId string = ''
 param instanceMemoryMB int = 2048
 param maximumInstanceCount int = 100
@@ -29,6 +30,7 @@ module api '../core/host/functions-flexconsumption.bicep' = {
       {
         AzureWebJobsStorage__clientId : identityClientId
         APPLICATIONINSIGHTS_AUTHENTICATION_STRING: applicationInsightsIdentity
+        CosmosDBConnectionString: cosmosDBConnectionString
       })
     applicationInsightsName: applicationInsightsName
     appServicePlanId: appServicePlanId

@@ -22,6 +22,7 @@ param appServicePlanName string = ''
 param logAnalyticsName string = ''
 param resourceGroupName string = ''
 param storageAccountName string = ''
+param cosmosDBAccountName string = ''
 param vNetName string = ''
 param disableLocalAuth bool = true
 
@@ -80,6 +81,9 @@ module api './app/api.bicep' = {
     identityId: apiUserAssignedIdentity.outputs.identityId
     identityClientId: apiUserAssignedIdentity.outputs.identityClientId
     appSettings: {
+      CosmosDBConnectionString: cosmosDB.outputs.endpoint
+      CosmosDBDatabaseName: 'SnippetsDB'
+      CosmosDBContainerName: 'snippets'
     }
     virtualNetworkSubnetId: !vnetEnabled ? '' : serviceVirtualNetwork.outputs.appSubnetID
   }
@@ -98,6 +102,18 @@ module storage './core/storage/storage-account.bicep' = {
     networkAcls: !vnetEnabled ? {} : {
       defaultAction: 'Deny'
     }
+  }
+}
+
+// Cosmos DB for additional snippet storage
+module cosmosDB './core/database/cosmos-db.bicep' = {
+  name: 'cosmosDB'
+  scope: rg
+  params: {
+    name: !empty(cosmosDBAccountName) ? cosmosDBAccountName : '${abbrs.documentDBDatabaseAccounts}${resourceToken}'
+    location: location
+    tags: tags
+    publicNetworkAccess: vnetEnabled ? 'Disabled' : 'Enabled'
   }
 }
 

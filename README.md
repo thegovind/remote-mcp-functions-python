@@ -48,6 +48,25 @@ An Azure Storage Emulator is needed for this particular sample because we will s
 
 >**Note** if you use Azurite coming from VS Code extension you need to run `Azurite: Start` now or you will see errors.
 
+2. Set up Cosmos DB Emulator
+
+    This project uses both Azure Blob Storage and Cosmos DB for storing snippets. You'll need to install the Cosmos DB Emulator for local development:
+
+    ```shell
+    # Download and install the Azure Cosmos DB Emulator from:
+    # https://docs.microsoft.com/en-us/azure/cosmos-db/local-emulator
+    ```
+
+    After installation:
+    
+    a. Start the Cosmos DB Emulator
+    
+    b. Create a database named "SnippetsDB" and a container named "snippets" with partition key "/id"
+       - You can do this through the emulator's web UI (https://localhost:8081/_explorer/index.html)
+       - Or use Azure CLI with the Cosmos DB extension
+    
+    The default connection string for the emulator is already configured in the local.settings.json file.
+
 ## Run your MCP Server locally from the terminal
 
 1. Change to the src folder in a new terminal window:
